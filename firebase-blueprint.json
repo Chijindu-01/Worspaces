@@ -1,0 +1,132 @@
+{
+  "entities": {
+    "StaffMember": {
+      "title": "StaffMember",
+      "description": "A staff member profile within the unified workspace environment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "email": { "type": "string" },
+        "avatarColor": { "type": "string" },
+        "roleType": { "type": "string", "enum": ["admin", "manager", "staff"] },
+        "googleCalendarConnected": { "type": "boolean" },
+        "zoomConnected": { "type": "boolean" },
+        "joinedWorkspace": { "type": "boolean" }
+      },
+      "required": ["id", "name", "role", "email"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A directive/task assigned to a staff member under accountability structures",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "desc": { "type": "string" },
+        "status": { "type": "string", "enum": ["todo", "in_progress", "awaiting_review", "completed", "reopened"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "dueDate": { "type": "string" },
+        "assigneeId": { "type": "string" },
+        "category": { "type": "string", "enum": ["work", "personal"] },
+        "isPrivate": { "type": "boolean" },
+        "blocksCalendar": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "completedAt": { "type": "string" },
+        "reminderSettings": { "type": "string" },
+        "recurrence": { "type": "string" },
+        "goalId": { "type": "string" },
+        "streakCounter": { "type": "number" }
+      },
+      "required": ["id", "title", "status", "priority", "assigneeId", "category", "createdAt"]
+    },
+    "Meeting": {
+      "title": "Meeting",
+      "description": "A scheduled standup or brainstorm session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "zoomLink": { "type": "string" },
+        "googleSync": { "type": "boolean" },
+        "reminderAlert": { "type": "boolean" },
+        "notes": { "type": "string" },
+        "zoomAiSummary": { "type": "string" }
+      },
+      "required": ["id", "title", "date", "startTime", "endTime"]
+    },
+    "Goal": {
+      "title": "Goal",
+      "description": "A milestone goal tracking company or personal performance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "progress": { "type": "number" },
+        "category": { "type": "string", "enum": ["personal", "team", "company"] },
+        "status": { "type": "string", "enum": ["not_started", "on_track", "at_risk", "completed"] }
+      },
+      "required": ["id", "title", "ownerId", "progress", "category", "status"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "An action-oriented reminder",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "dateTime": { "type": "string" },
+        "isCompleted": { "type": "boolean" },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "text", "dateTime", "isCompleted", "category"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "History of critical events within the platform",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "actorName": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "actorName", "action", "details"]
+    }
+  },
+  "firestore": {
+    "/staffMembers/{memberId}": {
+      "schema": "StaffMember",
+      "description": "Collection of staff profiles"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Collection of directives/tasks"
+    },
+    "/meetings/{meetingId}": {
+      "schema": "Meeting",
+      "description": "Collection of sync meetings"
+    },
+    "/goals/{goalId}": {
+      "schema": "Goal",
+      "description": "Collection of visual milestone goals"
+    },
+    "/reminders/{reminderId}": {
+      "schema": "Reminder",
+      "description": "Collection of user/system reminders"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Collection of historical logs"
+    }
+  }
+}

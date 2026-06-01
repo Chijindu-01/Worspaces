@@ -1,0 +1,168 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Catch-All Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Helper Functions (Zero-Trust)
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 3. Entity-Specific Validators
+
+    function isValidStaffMember(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role', 'roleType']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 128 &&
+        data.email is string && data.email.size() <= 256 &&
+        data.role is string && data.role.size() <= 128 &&
+        data.roleType is string && (data.roleType == 'admin' || data.roleType == 'manager' || data.roleType == 'staff') &&
+        (!data.keys().hasAll(['avatarColor']) || (data.avatarColor is string && data.avatarColor.size() <= 20)) &&
+        (!data.keys().hasAll(['googleCalendarConnected']) || data.googleCalendarConnected is bool) &&
+        (!data.keys().hasAll(['zoomConnected']) || data.zoomConnected is bool) &&
+        (!data.keys().hasAll(['joinedWorkspace']) || data.joinedWorkspace is bool);
+    }
+
+    // Schema validations
+    function isValidTask(data) {
+      return data.keys().hasAll(['id', 'title', 'status', 'priority', 'assigneeId', 'category', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 256 &&
+        data.status is string && (data.status == 'todo' || data.status == 'in_progress' || data.status == 'awaiting_review' || data.status == 'completed' || data.status == 'reopened') &&
+        data.priority is string && (data.priority == 'low' || data.priority == 'medium' || data.priority == 'high') &&
+        data.assigneeId is string && data.assigneeId.size() <= 128 &&
+        data.category is string && (data.category == 'work' || data.category == 'personal') &&
+        data.createdAt is string && data.createdAt.size() <= 64 &&
+        (!data.keys().hasAll(['desc']) || (data.desc is string && data.desc.size() <= 2000)) &&
+        (!data.keys().hasAll(['dueDate']) || (data.dueDate is string && data.dueDate.size() <= 64)) &&
+        (!data.keys().hasAll(['completedAt']) || (data.completedAt is string && data.completedAt.size() <= 64)) &&
+        (!data.keys().hasAll(['isPrivate']) || data.isPrivate is bool) &&
+        (!data.keys().hasAll(['blocksCalendar']) || data.blocksCalendar is bool) &&
+        (!data.keys().hasAll(['streakCounter']) || (data.streakCounter is int || data.streakCounter is float)) &&
+        (!data.keys().hasAll(['goalId']) || (data.goalId is string && data.goalId.size() <= 128));
+    }
+
+    function isValidMeeting(data) {
+      return data.keys().hasAll(['id', 'title', 'date', 'startTime', 'endTime']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 256 &&
+        data.date is string && data.date.size() <= 64 &&
+        data.startTime is string && data.startTime.size() <= 16 &&
+        data.endTime is string && data.endTime.size() <= 16 &&
+        (!data.keys().hasAll(['description']) || (data.description is string && data.description.size() <= 2000)) &&
+        (!data.keys().hasAll(['zoomLink']) || (data.zoomLink is string && data.zoomLink.size() <= 500)) &&
+        (!data.keys().hasAll(['googleSync']) || data.googleSync is bool) &&
+        (!data.keys().hasAll(['reminderAlert']) || data.reminderAlert is bool) &&
+        (!data.keys().hasAll(['notes']) || (data.notes is string && data.notes.size() <= 4000)) &&
+        (!data.keys().hasAll(['zoomAiSummary']) || (data.zoomAiSummary is string && data.zoomAiSummary.size() <= 4000));
+    }
+
+    function isValidGoal(data) {
+      return data.keys().hasAll(['id', 'title', 'ownerId', 'progress', 'category', 'status']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 256 &&
+        data.ownerId is string && data.ownerId.size() <= 128 &&
+        data.category is string && (data.category == 'personal' || data.category == 'team' || data.category == 'company') &&
+        data.status is string && (data.status == 'not_started' || data.status == 'on_track' || data.status == 'at_risk' || data.status == 'completed') &&
+        (data.progress is int || data.progress is float) && data.progress >= 0 && data.progress <= 100;
+    }
+
+    function isValidReminder(data) {
+      return data.keys().hasAll(['id', 'text', 'dateTime', 'isCompleted', 'category']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.text is string && data.text.size() > 0 && data.text.size() <= 500 &&
+        data.dateTime is string && data.dateTime.size() <= 64 &&
+        data.isCompleted is bool &&
+        data.category is string && data.category.size() <= 128;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'timestamp', 'actorName', 'action', 'details']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.timestamp is string && data.timestamp.size() <= 64 &&
+        data.actorName is string && data.actorName.size() <= 128 &&
+        data.action is string && data.action.size() <= 128 &&
+        data.details is string && data.details.size() <= 2000;
+    }
+
+    // 4. Matches and Collection Rules
+
+    match /staffMembers/{memberId} {
+      allow get: if isSignedIn() && isValidId(memberId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(memberId) && isValidStaffMember(request.resource.data);
+      allow update: if isSignedIn() && isValidId(memberId) && isValidStaffMember(request.resource.data) && (
+        // Self-updates on notifications or connection parameters
+        (memberId == request.auth.uid && request.resource.data.roleType == resource.data.roleType) ||
+        // Staff role validation (cannot perform unauthorized field edits)
+        (resource.data.roleType == 'admin')
+      );
+      allow delete: if isSignedIn() && isValidId(memberId) && resource.data.roleType == 'admin';
+    }
+
+    match /tasks/{taskId} {
+      allow get: if isSignedIn() && isValidId(taskId) && (
+        !resource.data.keys().hasAll(['isPrivate']) ||
+        resource.data.isPrivate == false ||
+        resource.data.assigneeId == request.auth.uid
+      );
+      allow list: if isSignedIn() && (
+        !resource.data.keys().hasAll(['isPrivate']) ||
+        resource.data.isPrivate == false ||
+        resource.data.assigneeId == request.auth.uid
+      );
+      allow create: if isSignedIn() && isValidId(taskId) && isValidTask(request.resource.data);
+      allow update: if isSignedIn() && isValidId(taskId) && isValidTask(request.resource.data) && (
+        // Assignee updating task status
+        (resource.data.assigneeId == request.auth.uid && request.resource.data.assigneeId == resource.data.assigneeId) ||
+        // General updates by creator/admin
+        (request.resource.data.assigneeId == resource.data.assigneeId)
+      );
+      allow delete: if isSignedIn() && isValidId(taskId) && (
+        resource.data.assigneeId == request.auth.uid
+      );
+    }
+
+    match /meetings/{meetingId} {
+      allow get: if isSignedIn() && isValidId(meetingId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(meetingId) && isValidMeeting(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(meetingId);
+    }
+
+    match /goals/{goalId} {
+      allow get: if isSignedIn() && isValidId(goalId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(goalId) && isValidGoal(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(goalId);
+    }
+
+    match /reminders/{reminderId} {
+      allow get: if isSignedIn() && isValidId(reminderId);
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(reminderId) && isValidReminder(request.resource.data);
+      allow delete: if isSignedIn() && isSignedIn() && isValidId(reminderId);
+    }
+
+    match /auditLogs/{logId} {
+      allow get: if isSignedIn() && isValidId(logId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(logId) && isValidAuditLog(request.resource.data);
+      // Audit logs are append-only. ABSOLUTELY NO UPDATES OR DELETES.
+      allow update, delete: if false;
+    }
+
+  }
+}

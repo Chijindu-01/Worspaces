@@ -1,0 +1,6 @@
+{
+  "name": "VFT Workspace",
+  "description": "A simple, workplace execution and accountability platform for teams to manage tasks, meetings, reminders, goals, calendar schedules, staff progress, and productivity reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
